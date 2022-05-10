@@ -36,6 +36,13 @@ class RobotBase:
         # a is found to place our maximum velocity at maximum error
         w = coef * (angle_error ** 2)
 
-        naive_v = 0
+        # The velocity should trail off as we get closer, but also
+        #  if we are facing the wrong direction; we use two functions
+        #  to control this: sqrt for getting closer, 1/x for turning
+        #  around.  Both of these need to be cut off at a certain point
+        closerCoef = min( (1.69031 * math.hypot(*pos_error)), 1 )
+        pointingCoef = max( min( (1 / (angle_error + 0.693671)) - 0.441605, (1) ), 0)
+
+        v = closerCoef * pointingCoef
 
         return v, w
