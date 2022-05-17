@@ -1,5 +1,7 @@
 import math
 
+def rescale(val, in_min, in_max, out_min, out_max):
+    return out_min + (val - in_min) * ((out_max - out_min) / (in_max - in_min))
 
 class RobotBase:
     def __init__(self):
@@ -14,6 +16,28 @@ class RobotBase:
     def set_ultrasonic(self, ultrasonic):
         self.ultrasonic = ultrasonic
 
+    def avoid_obstacles(self):
+        forward_multiplier = 0.5
+        if(self.ultrasonic is None):
+            return (forward_multiplier, 0.0)
+
+        shortest_index = [i[0] for i in sorted(enumerate(self.ultrasonic), key=lambda x: x[1])][0]
+
+        min_dist = 55
+        if self.ultrasonic[shortest_index] < min_dist:
+            turn_direction = 1 if shortest_index > 3 else -1
+            # Bigger means closer
+            closeness = min_dist - self.ultrasonic[shortest_index]
+            turn_speed = rescale(closeness, 0, min_dist, 0.3, 2.5)
+            forward_speed = rescale(max(self.ultrasonic[shortest_index] - 10, 0), 0, min_dist, 0, forward_multiplier)
+
+            w = turn_direction * turn_speed
+            v = forward_speed
+            return v, w
+        v = forward_multiplier
+        w = 0.0
+        return (v, w)
+
     def get_velocity(self):
         coef = 0.477465
 
@@ -25,17 +49,27 @@ class RobotBase:
 
         # Derive our displacement from where we want to go
         pos_error = (goal[0] - self.position[0], goal[1] - self.position[1])
-        print(f"Pos Err: {pos_error}")
+        #print(f"Pos Err: {pos_error}")
 
         # Derive distance to angle we *should* be at
         angle_error = math.atan2(pos_error[1], pos_error[0]) - self.angle
-        print(f"Ang Err: {angle_error * 180 / math.pi}")
+        #print(f"Ang Err: {angle_error * 180 / math.pi}")
 
         # Our angular velocity should scale down as we get closer
         # For this we choose w = a * t^2 for a nice quadratic
         # a is found to place our maximum velocity at maximum error
         w = coef * (angle_error ** 2)
 
-        naive_v = 0
+        # The velocity should trail off as we get closer, but also
+        #  if we are facing the wrong direction; we use two functions
+        #  to control this: sqrt for getting closer, 1/x for turning
+        #  around.  Both of these need to be cut off at a certain point
+        closerCoef = min( (1.69031 * math.hypot(*pos_error)), 1 )
+        pointingCoef = max( min( (1 / (angle_error + 0.693671)) - 0.441605, (1) ), 0)
+
+        v = closerCoef * pointingCoef
+
+        v, w = self.avoid_obstacles()
+        v = v * -1
 
         return v, w
