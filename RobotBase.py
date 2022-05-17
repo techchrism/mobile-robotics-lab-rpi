@@ -49,11 +49,11 @@ class RobotBase:
 
         # Derive our displacement from where we want to go
         pos_error = (goal[0] - self.position[0], goal[1] - self.position[1])
-        #print(f"Pos Err: {pos_error}")
+        print(f"Pos Err: {pos_error}")
 
         # Derive distance to angle we *should* be at
         angle_error = math.atan2(pos_error[1], pos_error[0]) - self.angle
-        #print(f"Ang Err: {angle_error * 180 / math.pi}")
+        print(f"Ang Err: {angle_error * 180 / math.pi}")
 
         # Our angular velocity should scale down as we get closer
         # For this we choose w = a * t^2 for a nice quadratic
