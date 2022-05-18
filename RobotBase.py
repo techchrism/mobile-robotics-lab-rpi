@@ -39,6 +39,14 @@ class RobotBase:
         return (v, w)
 
     def get_velocity(self, telemetry_frame):
+        if self.ultrasonic is None or self.position is None:
+            return 0.0, 0.0
+
+        if telemetry_frame is not None:
+            telemetry_frame['pos'] = self.position
+            telemetry_frame['angle'] = self.angle
+            telemetry_frame['ultrasonic'] = self.ultrasonic
+
         coef = 0.477465
 
         v = 0.0
