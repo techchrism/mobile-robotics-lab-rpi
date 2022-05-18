@@ -4,9 +4,9 @@ from RobotBase import RobotBase
 import time
 import threading
 import math
-from pyquaternion import Quaternion
-
-import quaternionTest
+import asyncio
+#from pyquaternion import Quaternion
+#import quaternionTest
 
 optitrack_data = None
 optitrack_id = 25
@@ -62,7 +62,7 @@ def optitrack_callback(bodies, markers, timing):
         
         #print(body)
         #print(quaternion_to_angle(body.orientation))
-        quaternionTest.printQuaternionInfo(body.orientation)
+        #quaternionTest.printQuaternionInfo(body.orientation)
         now = current_milli_time()
 
         # print('\t'.join([str(x) for x in body.orientation]), end='\t')
@@ -71,33 +71,45 @@ def optitrack_callback(bodies, markers, timing):
         optitrack_data = body
 
 
-def ultrasonic_callback(values):
-    global ultrasonic_data
-    values = [x or 999 for x in values]
-    ultrasonic_data = values
+class Coordinator:
+    arduino = None
+    optitrack = None
+    ultrasonic_values = None
+    optitrack_data = None
 
+    def __init__(self):
+        None
 
-def async_loop():
-    global optitrack_data, ultrasonic_data, arduino
+    def _ultrasonic_callback(self, values):
+        values = [x or 999 for x in values]
+        self.ultrasonic_data = values
 
-    time.sleep(1)
-    print('Starting')
-    try:
+    def _optitrack_callback(self, bodies, markers, timing):
+        print(f'Got {len(bodies)} bodies')
+
+    async def start(self):
+        self.arduino = ArduinoManager('COM10', self._ultrasonic_callback)
+        self.optitrack = OptitrackManager(self._optitrack_callback)
+
+        await asyncio.gather(
+            self.arduino.start(),
+            self.optitrack.start(),
+            self._loop()
+        )
+
+    async def _loop(self):
+        await asyncio.sleep(1.0)
         while True:
             robot.set_position((0, 0), 0)
-            robot.set_ultrasonic(ultrasonic_data)
+            robot.set_ultrasonic(self.ultrasonic_values)
             v, w = robot.get_velocity()
-            arduino.send_speed(v, w)
-            time.sleep(0.1)
+            self.arduino.send_speed(v, w)
+            await asyncio.sleep(0.5)
+
+
+if __name__ == '__main__':
+    coordinator = Coordinator()
+    try:
+        asyncio.get_event_loop().run_until_complete(coordinator.start())
     except KeyboardInterrupt:
-        arduino.send_speed(0, 0)
-        return
-
-
-test = OptitrackManager(optitrack_callback)
-arduino = ArduinoManager('/dev/ttyACM0', ultrasonic_callback)
-arduino.start()
-
-test.start()
-t = threading.Thread(target=async_loop)
-t.start()
+        print('Ended from main!!')

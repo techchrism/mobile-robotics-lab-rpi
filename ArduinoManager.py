@@ -1,24 +1,22 @@
-import serial
-import threading
 import time
+import serial_asyncio
 
 
 class ArduinoManager:
     callback = None
-    ser = None
+    reader = None
+    writer = None
+    device = None
 
     def __init__(self, device, callback):
         self.callback = callback
-        self.ser = serial.Serial(device, 115200)
+        self.device = device
 
-    def start(self):
-        t = threading.Thread(target=self.start_async)
-        t.start()
-
-    def start_async(self):
-        time.sleep(1)
+    async def start(self):
+        self.reader, self.writer = await serial_asyncio.open_serial_connection(url=self.device, baudrate=115200)
         while True:
-            line = self.ser.readline().decode('ascii').strip()
+            line = await self.reader.readline()
+            line = line.decode('ascii').strip()
             # Try parsing as 5 ultrasonic data
             parts = line.split(' ')
             if len(parts) == 5:
@@ -30,4 +28,4 @@ class ArduinoManager:
 
     def send_speed(self, v, w):
         data = f'{v} {w}\n'
-        self.ser.write(data.encode())
+        self.writer.write(data.encode())

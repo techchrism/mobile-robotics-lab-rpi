@@ -1,5 +1,5 @@
 import natnet
-import threading
+import asyncio
 
 
 class OptitrackManager:
@@ -9,14 +9,14 @@ class OptitrackManager:
     def __init__(self, callback):
         self.callback = callback
 
-    def start(self):
-        t = threading.Thread(target=self.start_async)
-        t.start()
-
-    def start_async(self):
+    async def start(self):
         self.client = natnet.Client.connect()
         self.client.set_callback(self._callback)
-        self.client.spin()
+        await self._spin()
+
+    async def _spin(self):
+        while True:
+            await asyncio.get_event_loop().run_in_executor(None, self.client.run_once)
 
     def _callback(self, rigid_bodies, markers, timing):
         if self.callback is not None:
