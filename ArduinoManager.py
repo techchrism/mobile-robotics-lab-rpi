@@ -29,3 +29,6 @@ class ArduinoManager:
     def send_speed(self, v, w):
         data = f'{v} {w}\n'
         self.writer.write(data.encode())
+
+    def send_kill(self):
+        self.writer.write('kill\n'.encode())

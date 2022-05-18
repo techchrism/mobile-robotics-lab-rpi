@@ -82,6 +82,7 @@ class Coordinator:
 
     def _ultrasonic_callback(self, values):
         values = [x or 999 for x in values]
+        print(values)
         self.ultrasonic_data = values
 
     def _optitrack_callback(self, bodies, markers, timing):
@@ -93,7 +94,7 @@ class Coordinator:
 
         await asyncio.gather(
             self.arduino.start(),
-            self.optitrack.start(),
+            #self.optitrack.start(),
             self._loop()
         )
 
@@ -106,10 +107,14 @@ class Coordinator:
             self.arduino.send_speed(v, w)
             await asyncio.sleep(0.5)
 
+    def kill(self):
+        self.arduino.send_kill()
+
 
 if __name__ == '__main__':
     coordinator = Coordinator()
     try:
         asyncio.get_event_loop().run_until_complete(coordinator.start())
     except KeyboardInterrupt:
-        print('Ended from main!!')
+        coordinator.kill()
+        print('Killed by interrupt')
