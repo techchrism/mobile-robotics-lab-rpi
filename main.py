@@ -7,6 +7,7 @@ import math
 import asyncio
 #from pyquaternion import Quaternion
 #import quaternionTest
+from TelemetryManager import TelemetryManager
 
 optitrack_data = None
 optitrack_id = 25
@@ -74,6 +75,8 @@ def optitrack_callback(bodies, markers, timing):
 class Coordinator:
     arduino = None
     optitrack = None
+    telemetry = None
+
     ultrasonic_values = None
     optitrack_data = None
 
@@ -82,7 +85,6 @@ class Coordinator:
 
     def _ultrasonic_callback(self, values):
         values = [x or 999 for x in values]
-        print(values)
         self.ultrasonic_data = values
 
     def _optitrack_callback(self, bodies, markers, timing):
@@ -91,10 +93,12 @@ class Coordinator:
     async def start(self):
         self.arduino = ArduinoManager('COM10', self._ultrasonic_callback)
         self.optitrack = OptitrackManager(self._optitrack_callback)
+        self.telemetry = TelemetryManager(9090)
 
         await asyncio.gather(
             self.arduino.start(),
             #self.optitrack.start(),
+            self.telemetry.start(),
             self._loop()
         )
 
@@ -103,8 +107,12 @@ class Coordinator:
         while True:
             robot.set_position((0, 0), 0)
             robot.set_ultrasonic(self.ultrasonic_values)
-            v, w = robot.get_velocity()
+
+            v, w = robot.get_velocity(self.telemetry.frame)
+
             self.arduino.send_speed(v, w)
+            self.telemetry.send_frame()
+
             await asyncio.sleep(0.5)
 
     def kill(self):

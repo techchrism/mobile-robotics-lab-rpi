@@ -38,7 +38,7 @@ class RobotBase:
         w = 0.0
         return (v, w)
 
-    def get_velocity(self):
+    def get_velocity(self, telemetry_frame):
         coef = 0.477465
 
         v = 0.0
@@ -49,7 +49,9 @@ class RobotBase:
 
         # Derive our displacement from where we want to go
         pos_error = (goal[0] - self.position[0], goal[1] - self.position[1])
-        print(f"Pos Err: {pos_error}")
+        #print(f"Pos Err: {pos_error}")
+        if telemetry_frame is not None:
+            telemetry_frame['pos_error'] = pos_error
 
         # Derive distance to angle we *should* be at
         angle_error = math.atan2(pos_error[1], pos_error[0]) - self.angle
