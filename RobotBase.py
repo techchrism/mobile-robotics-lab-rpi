@@ -1,7 +1,9 @@
 import math
 
+
 def rescale(val, in_min, in_max, out_min, out_max):
     return out_min + (val - in_min) * ((out_max - out_min) / (in_max - in_min))
+
 
 class RobotBase:
     def __init__(self):
@@ -18,8 +20,6 @@ class RobotBase:
 
     def avoid_obstacles(self):
         forward_multiplier = 0.5
-        if(self.ultrasonic is None):
-            return (forward_multiplier, 0.0)
 
         shortest_index = [i[0] for i in sorted(enumerate(self.ultrasonic), key=lambda x: x[1])][0]
 

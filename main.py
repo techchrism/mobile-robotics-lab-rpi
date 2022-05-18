@@ -113,7 +113,7 @@ class Coordinator:
             self.arduino.send_speed(v, w)
             self.telemetry.send_frame()
 
-            await asyncio.sleep(0.5)
+            await asyncio.sleep(0.1)
 
     def kill(self):
         self.arduino.send_kill()
