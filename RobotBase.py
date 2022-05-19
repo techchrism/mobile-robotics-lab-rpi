@@ -3,6 +3,7 @@ import math
 STATE_GO_TO_GOAL = 'go to goal'
 STATE_AVOID_OBSTACLES = 'avoid obstacles'
 STATE_BLEND_GOAL_OBSTACLES = 'blend goal and obstacles'
+STATE_DONE = 'done'
 
 
 def rescale(val, in_min, in_max, out_min, out_max):
@@ -46,8 +47,11 @@ class RobotBase:
         w = 0.0
         return v, w
 
+    def get_distance_from_goal(self):
+        return math.sqrt(((self.position[0] - self.goal[0])**2) + ((self.position[1] - self.goal[1])**2))
+
     def go_to_goal(self):
-        distance_from_goal = math.sqrt(((self.position[0] - self.goal[0])**2) + ((self.position[1] - self.goal[1])**2))
+        distance_from_goal = self.get_distance_from_goal()
 
         angle_from_bot = math.atan2((self.goal[0] - self.position[0]), (self.goal[1] - self.position[1]))
         bot_angle = self.angle
@@ -80,6 +84,8 @@ class RobotBase:
         if self.ultrasonic is None or self.position is None:
             return 0.0, 0.0
 
+        distance_from_goal = self.get_distance_from_goal()
+
         if telemetry_frame is not None:
             telemetry_frame['pos'] = self.position
             telemetry_frame['angle'] = self.angle
@@ -87,13 +93,23 @@ class RobotBase:
             telemetry_frame['weighted_ultrasonic'] = self.weighted_ultrasonic
             telemetry_frame['state'] = self.state
             telemetry_frame['goal'] = self.goal
+            telemetry_frame['goal_distance'] = distance_from_goal
 
         blend_goal_obstacles_threshold = 50
         avoid_obstacles_threshold = 20
+        done_threshold = 0.05
+
+        if self.state == STATE_DONE:
+            return 0, 0
 
         # Avoid obstacles when too close
         if min(self.weighted_ultrasonic) < avoid_obstacles_threshold and self.state != STATE_AVOID_OBSTACLES:
             self.state = STATE_AVOID_OBSTACLES
+            return self.get_velocity(telemetry_frame)
+
+        # Switch to done state if within range of goal
+        if distance_from_goal < 0.1 and self.state != STATE_DONE:
+            self.state = STATE_DONE
             return self.get_velocity(telemetry_frame)
 
         if self.state == STATE_GO_TO_GOAL:

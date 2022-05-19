@@ -124,6 +124,7 @@ class Simulator:
             self.pos = (self.pos[0] + (v * math.cos((self.angle * -1) - (math.pi / 2))), self.pos[1] + (v * math.sin((self.angle * -1) - (math.pi / 2))))
 
             self.telemetry.frame['lines'] = self.lines
+            self.telemetry.frame['simulator'] = True
             self.telemetry.send_frame()
 
             await asyncio.sleep(0.05)
