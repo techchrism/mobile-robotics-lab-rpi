@@ -5,9 +5,9 @@ import time
 import threading
 import math
 import asyncio
-#from pyquaternion import Quaternion
-#import quaternionTest
 from TelemetryManager import TelemetryManager
+import transformations as tf
+
 
 optitrack_data = None
 optitrack_id = 25
@@ -22,54 +22,14 @@ def current_milli_time():
 last_time = current_milli_time()
 
 
-def euler_from_quaternion(x, y, z, w):
-        """
-        Convert a quaternion into euler angles (roll, pitch, yaw)
-        roll is rotation around x in radians (counterclockwise)
-        pitch is rotation around y in radians (counterclockwise)
-        yaw is rotation around z in radians (counterclockwise)
-        """
-        t0 = +2.0 * (w * x + y * z)
-        t1 = +1.0 - 2.0 * (x * x + y * y)
-        roll_x = math.atan2(t0, t1)
-     
-        t2 = +2.0 * (w * y - z * x)
-        t2 = +1.0 if t2 > +1.0 else t2
-        t2 = -1.0 if t2 < -1.0 else t2
-        pitch_y = math.asin(t2)
-     
-        t3 = +2.0 * (w * z + x * y)
-        t4 = +1.0 - 2.0 * (y * y + z * z)
-        yaw_z = math.atan2(t3, t4)
-     
-        return roll_x, pitch_y, yaw_z
-
-
-def quaternion_to_angle(q):
-    #trident = math.atan2(2*((q[0]*q[3]) + (q[1]*q[2])), 1 - (2*(q[2]**2 + q[3]**2)))
-    #o_with_cross = math.atan2(2*((q[0]*q[1]) + (q[2]*q[3])), 1 - (2*(q[1]**2 + q[2]**2)))
-    #theta = math.asin(2*((q[0]*q[2])-(q[3]*q[1])))
-    #return theta
-    # x, y, z = euler_from_quaternion(q[0],
-    #  q[1], q[2], q[3])
-    return Quaternion(q[3], q[0], q[1], q[2]).radians
-
-
-def optitrack_callback(bodies, markers, timing):
-    global optitrack_id, optitrack_data, last_time
-    for body in bodies:
-        if body.id_ != optitrack_id:
-            continue
-        
-        #print(body)
-        #print(quaternion_to_angle(body.orientation))
-        #quaternionTest.printQuaternionInfo(body.orientation)
-        now = current_milli_time()
-
-        # print('\t'.join([str(x) for x in body.orientation]), end='\t')
-        # print((now-last_time))
-        last_time = now
-        optitrack_data = body
+def q_to_angle(orient):
+    euler = tf.euler_from_quaternion(orient)
+    angle = euler[1]
+    if(abs(euler[2]) < 2 or angle < 0):
+        angle += ((math.pi / 2) - angle) * 2
+    if(euler[1] < 0 and abs(euler[2]) > 2):
+        angle += ((math.pi / 2) - abs(euler[1])) * 2
+    return angle
 
 
 class Coordinator:
@@ -85,19 +45,24 @@ class Coordinator:
 
     def _ultrasonic_callback(self, values):
         values = [x or 999 for x in values]
-        self.ultrasonic_data = values
+        self.ultrasonic_values = values
 
     def _optitrack_callback(self, bodies, markers, timing):
-        print(f'Got {len(bodies)} bodies')
+        optitrack_id = 25
+        for body in bodies:
+            if body.id_ != optitrack_id:
+                continue
+            self.optitrack_data = body
+            #print(f'{body.position[0]}\t{body.position[1]}\t{body.position[2]}\t')
 
     async def start(self):
-        self.arduino = ArduinoManager('COM10', self._ultrasonic_callback)
+        self.arduino = ArduinoManager('/dev/ttyACM0', self._ultrasonic_callback)
         self.optitrack = OptitrackManager(self._optitrack_callback)
         self.telemetry = TelemetryManager(9090)
 
         await asyncio.gather(
             self.arduino.start(),
-            #self.optitrack.start(),
+            self.optitrack.start(),
             self.telemetry.start(),
             self._loop()
         )
@@ -105,18 +70,26 @@ class Coordinator:
     async def _loop(self):
         await asyncio.sleep(1.0)
         while True:
-            robot.set_position((0, 0), 0)
+            if self.optitrack_data is None:
+                await asyncio.sleep(0.1)
+                continue
+
+            angle = q_to_angle(self.optitrack_data.orientation)
+            angle = (angle + math.pi) % (math.pi * 2)
+            robot.set_position((self.optitrack_data.position[0] * -1, self.optitrack_data.position[2] * -1), angle)
             robot.set_ultrasonic(self.ultrasonic_values)
+            #robot.set_ultrasonic([200, 200, 200, 200, 200])
 
             v, w = robot.get_velocity(self.telemetry.frame)
 
-            self.arduino.send_speed(v, w)
+            #self.arduino.send_speed(v, w)
             self.telemetry.send_frame()
 
             await asyncio.sleep(0.1)
 
     def kill(self):
-        self.arduino.send_kill()
+        #self.arduino.send_kill()
+        None
 
 
 if __name__ == '__main__':

@@ -16,7 +16,7 @@ class TelemetryManager:
         self.port = port
 
     async def start(self):
-        self.server = await serve(self._connect, 'localhost', self.port)
+        self.server = await serve(self._connect, '0.0.0.0', self.port)
         print(f'Started telemetry server on port {self.port}')
 
     def send_frame(self):

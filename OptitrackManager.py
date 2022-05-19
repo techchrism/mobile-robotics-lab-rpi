@@ -15,8 +15,12 @@ class OptitrackManager:
         await self._spin()
 
     async def _spin(self):
-        while True:
-            await asyncio.get_event_loop().run_in_executor(None, self.client.run_once)
+        #while True:
+        #    await asyncio.get_event_loop().run_in_executor(None, self.client.run_once)
+        await asyncio.get_event_loop().run_in_executor(None, self._full_spin)
+
+    def _full_spin(self):
+        self.client.spin()
 
     def _callback(self, rigid_bodies, markers, timing):
         if self.callback is not None:

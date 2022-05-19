@@ -38,6 +38,23 @@ class RobotBase:
         w = 0.0
         return (v, w)
 
+    def go_to_goal(self):
+        goal = (-0.936, 1.708)
+
+        distance_from_goal = math.sqrt(((self.position[0] - goal[0])**2) + ((self.position[1] - goal[1])**2))
+        
+
+        angle_from_bot = math.atan2((goal[0] - self.position[0]), (goal[1] - self.position[1])) * -1
+        bot_angle = self.angle
+        if(bot_angle > math.pi):
+            bot_angle = bot_angle - (math.pi * 2)
+
+        angle_distance = angle_from_bot - bot_angle
+
+        print(f'{angle_distance}\t{distance_from_goal}\t{(goal[0] - self.position[0])}\t{(goal[1] - self.position[1])}')
+
+        return 0, 0
+
     def get_velocity(self, telemetry_frame):
         if self.ultrasonic is None or self.position is None:
             return 0.0, 0.0
@@ -79,7 +96,8 @@ class RobotBase:
 
         v = closerCoef * pointingCoef
 
-        v, w = self.avoid_obstacles()
+        #v, w = self.avoid_obstacles()
+        v, w = self.go_to_goal()
         v = v * -1
 
         return v, w
