@@ -40,7 +40,7 @@ def line_intersection(line1, line2):
     x = det(d, xdiff) / div
     y = det(d, ydiff) / div
 
-    if not isBetween(line1[0], line1[1], (x, y)):
+    if (not isBetween(line1[0], line1[1], (x, y))) or (not isBetween(line2[0], line2[1], (x, y))):
         return False, x, y
 
     return True, x, y
@@ -55,15 +55,18 @@ class Simulator:
     robot = RobotBase()
 
     ultrasonic_values = [100, 100, 100, 100, 100]
-    pos = (0.000, 0.000)
+    pos = (0.000, -1.000)
     #pos = (0.000, 0.500)
     #angle = (math.pi * 1.9)
     angle = 0
+    border_radius = 2000
     lines = [
-        ((1500, 1500), (1500, -1500)),
-        ((1500, -1500), (-1500, -1500)),
-        ((-1500, -1500), (-1500, 1500)),
-        ((-1500, 1500), (1500, 1500)),
+        ((border_radius, border_radius), (border_radius, -border_radius)),
+        ((border_radius, -border_radius), (-border_radius, -border_radius)),
+        ((-border_radius, -border_radius), (-border_radius, border_radius)),
+        ((-border_radius, border_radius), (border_radius, border_radius)),
+
+        ((-400, 0), (400, 0))
              ]
 
     def __init__(self):
