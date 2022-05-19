@@ -4,6 +4,26 @@ import math
 import asyncio
 from TelemetryManager import TelemetryManager
 
+
+# Adapted from https://stackoverflow.com/a/328122
+def isBetween(a, b, c):
+    crossproduct = (c[1] - a[1]) * (b[0] - a[0]) - (c[0] - a[0]) * (b[1] - a[1])
+
+    # compare versus epsilon for floating point values, or != 0 if using integers
+    epsilon = 0.01
+    if abs(crossproduct) > epsilon:
+        return False
+
+    dotproduct = (c[0] - a[0]) * (b[0] - a[0]) + (c[1] - a[1])*(b[1] - a[1])
+    if dotproduct < 0:
+        return False
+
+    squaredlengthba = (b[0] - a[0])*(b[0] - a[0]) + (b[1] - a[1])*(b[1] - a[1])
+    if dotproduct > squaredlengthba:
+        return False
+
+    return True
+
 # Adapted from https://stackoverflow.com/a/20677983
 def line_intersection(line1, line2):
     xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
@@ -20,12 +40,8 @@ def line_intersection(line1, line2):
     x = det(d, xdiff) / div
     y = det(d, ydiff) / div
 
-    #TODO fix "on line" detection
-    #if ((x > max(line1[0][0], line1[1][0]) or x < min(line1[0][0], line1[1][0])) or
-    #   (y > max(line1[0][1], line1[1][1]) or y < min(line1[0][1], line1[1][1])) or
-    #   (x > max(line2[0][0], line2[1][0]) or x < min(line2[0][0], line2[1][0])) or
-    #   (y > max(line2[0][1], line2[1][1]) or y < min(line2[0][1], line2[1][1]))):
-    #    return False, x, y
+    if not isBetween(line1[0], line1[1], (x, y)):
+        return False, x, y
 
     return True, x, y
 
@@ -97,11 +113,12 @@ class Simulator:
 
             v, w = self.robot.get_velocity(self.telemetry.frame)
 
-            v = v / 30
-            w = w / 100
+            v = v / 20
+            w = w * -1
+            w = w / 70
 
             self.angle = (self.angle + w) % (math.pi * 2)
-            self.pos = (self.pos[0] + (v * math.cos(self.angle - (math.pi / 2))), self.pos[1] + (v * math.sin(self.angle - (math.pi / 2))))
+            self.pos = (self.pos[0] + (v * math.cos((self.angle * -1) - (math.pi / 2))), self.pos[1] + (v * math.sin((self.angle * -1) - (math.pi / 2))))
 
             self.telemetry.frame['lines'] = self.lines
             self.telemetry.send_frame()

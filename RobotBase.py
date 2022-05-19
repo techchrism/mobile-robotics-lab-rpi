@@ -25,7 +25,7 @@ class RobotBase:
 
         min_dist = 55
         if self.ultrasonic[shortest_index] < min_dist:
-            turn_direction = 1 if shortest_index > 3 else -1
+            turn_direction = 1 if shortest_index > 2 else -1
             # Bigger means closer
             closeness = min_dist - self.ultrasonic[shortest_index]
             turn_speed = rescale(closeness, 0, min_dist, 0.3, 2.5)
