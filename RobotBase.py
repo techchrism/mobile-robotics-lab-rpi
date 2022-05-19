@@ -38,22 +38,37 @@ class RobotBase:
         w = 0.0
         return (v, w)
 
-    def go_to_goal(self):
-        goal = (-0.936, 1.708)
+    def go_to_goal(self, telemetry_frame):
+        #goal = (-0.936, 1.708)
+        goal = (-1, -1)
+
+        if telemetry_frame is not None:
+            telemetry_frame['goal'] = goal
 
         distance_from_goal = math.sqrt(((self.position[0] - goal[0])**2) + ((self.position[1] - goal[1])**2))
-        
 
-        angle_from_bot = math.atan2((goal[0] - self.position[0]), (goal[1] - self.position[1])) * -1
+        angle_from_bot = math.atan2((goal[0] - self.position[0]), (goal[1] - self.position[1]))
         bot_angle = self.angle
-        if(bot_angle > math.pi):
+        if bot_angle > math.pi:
             bot_angle = bot_angle - (math.pi * 2)
 
-        angle_distance = angle_from_bot - bot_angle
+        angle_distance = math.atan2(math.sin(angle_from_bot - bot_angle), math.cos(angle_from_bot - bot_angle))
 
-        print(f'{angle_distance}\t{distance_from_goal}\t{(goal[0] - self.position[0])}\t{(goal[1] - self.position[1])}')
+        max_turn_speed = 1
+        min_turn_speed = 0.5
+        power_from_distance = rescale(min(distance_from_goal, 1), 0, 1, 0, 0.5)
+        turn_speed = rescale(abs(angle_distance), 0, math.pi, min_turn_speed, max_turn_speed)
+        power_from_turn = max(rescale(abs(angle_distance), 0, (math.pi / 5), power_from_distance, 0), 0)
 
-        return 0, 0
+        w = turn_speed
+        if angle_distance > 0:
+            w *= -1
+        v = power_from_turn
+
+        #print(f'{angle_distance}\t{distance_from_goal}\t{(goal[0] - self.position[0])}\t{(goal[1] - self.position[1])}')
+        #print(f'{angle_distance}\t{distance_from_goal}\t{angle_from_bot}\t{bot_angle}')
+
+        return v, w
 
     def get_velocity(self, telemetry_frame):
         if self.ultrasonic is None or self.position is None:
@@ -96,8 +111,8 @@ class RobotBase:
 
         v = closerCoef * pointingCoef
 
-        v, w = self.avoid_obstacles()
-        #v, w = self.go_to_goal()
+        #v, w = self.avoid_obstacles()
+        v, w = self.go_to_goal(telemetry_frame)
         #v, w = 0, 0
         v = v * -1
 

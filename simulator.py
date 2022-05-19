@@ -113,9 +113,9 @@ class Simulator:
 
             v, w = self.robot.get_velocity(self.telemetry.frame)
 
-            v = v / 20
+            v = v / 30
             w = w * -1
-            w = w / 70
+            w = w / 80
 
             self.angle = (self.angle + w) % (math.pi * 2)
             self.pos = (self.pos[0] + (v * math.cos((self.angle * -1) - (math.pi / 2))), self.pos[1] + (v * math.sin((self.angle * -1) - (math.pi / 2))))
@@ -123,7 +123,7 @@ class Simulator:
             self.telemetry.frame['lines'] = self.lines
             self.telemetry.send_frame()
 
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.05)
 
 
 if __name__ == '__main__':
