@@ -96,8 +96,9 @@ class RobotBase:
 
         v = closerCoef * pointingCoef
 
-        #v, w = self.avoid_obstacles()
-        v, w = self.go_to_goal()
+        v, w = self.avoid_obstacles()
+        #v, w = self.go_to_goal()
+        #v, w = 0, 0
         v = v * -1
 
         return v, w
