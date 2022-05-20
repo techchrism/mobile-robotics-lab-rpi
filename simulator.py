@@ -55,19 +55,32 @@ class Simulator:
     robot = RobotBase()
 
     ultrasonic_values = [100, 100, 100, 100, 100]
-    pos = (0.000, -1.000)
+    pos = (-0.200, 0.000)
     #pos = (0.000, 0.500)
     #angle = (math.pi * 1.9)
     angle = 0
     border_radius = 2000
-    lines = [
+
+    border_lines = [
         ((border_radius, border_radius), (border_radius, -border_radius)),
         ((border_radius, -border_radius), (-border_radius, -border_radius)),
         ((-border_radius, -border_radius), (-border_radius, border_radius)),
-        ((-border_radius, border_radius), (border_radius, border_radius)),
+        ((-border_radius, border_radius), (border_radius, border_radius))
+        ]
 
-        ((-400, 0), (400, 0))
+
+    box_lines = [
+        ((-1000, -500), (100, -500)),
+        ((-1000, -500), (-1000, 500)),
+        ((-1000, 500), (1000, 500)),
+        ((1000, 500), (1000, -500)),
              ]
+
+    maze_lines = [
+
+    ]
+
+    lines = box_lines
 
     def __init__(self):
         None
@@ -93,8 +106,8 @@ class Simulator:
                                    ((self.pos[0] * 1000) + (ultrasonic_range * math.cos(ultrasonic_angle)),
                                     (self.pos[1] * 1000) + (ultrasonic_range * math.sin(ultrasonic_angle)))
                                     )
-                dots.append(ultrasonic_line[0])
-                dots.append(ultrasonic_line[1])
+                #dots.append(ultrasonic_line[0])
+                #dots.append(ultrasonic_line[1])
                 has_collision = False
                 smallest_collision = 9999
                 for line in self.lines:

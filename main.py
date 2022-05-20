@@ -7,6 +7,7 @@ import math
 import asyncio
 from TelemetryManager import TelemetryManager
 import transformations as tf
+import random
 
 
 optitrack_data = None
@@ -45,6 +46,7 @@ class Coordinator:
 
     def _ultrasonic_callback(self, values):
         values = [x or 999 for x in values]
+        #print(values)
         self.ultrasonic_values = values
 
     def _optitrack_callback(self, bodies, markers, timing):
@@ -60,6 +62,7 @@ class Coordinator:
         self.optitrack = OptitrackManager(self._optitrack_callback)
         self.telemetry = TelemetryManager(9090)
 
+        print('Running all start sequences')
         await asyncio.gather(
             self.arduino.start(),
             self.optitrack.start(),
@@ -69,23 +72,31 @@ class Coordinator:
 
     async def _loop(self):
         await asyncio.sleep(1.0)
+        print('Starting main loop')
         while True:
             if self.optitrack_data is None:
-                await asyncio.sleep(0.1)
+                await asyncio.sleep(1)
+                print('Waiting for optitrack...')
                 continue
 
             angle = q_to_angle(self.optitrack_data.orientation)
             angle = (angle + math.pi) % (math.pi * 2)
-            robot.set_position((self.optitrack_data.position[0] * -1, self.optitrack_data.position[2] * -1), angle)
+            robot.set_position((self.optitrack_data.position[0] * -1, self.optitrack_data.position[2]), angle)
             robot.set_ultrasonic(self.ultrasonic_values)
             #robot.set_ultrasonic([200, 200, 200, 200, 200])
 
-            v, w = robot.get_velocity(self.telemetry.frame)
 
-            #self.arduino.send_speed(v, w)
+            v, w = robot.get_velocity(self.telemetry.frame)
+            w = w + random.uniform(-0.09, 0.09)
+            v = v + random.uniform(-0.09, 0.09)
+            #w = w * 1.1
+            #v = min(v, -0.5)
+            #v = 0
+
+            self.arduino.send_speed(v, w)
             self.telemetry.send_frame()
 
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.05)
 
     def kill(self):
         #self.arduino.send_kill()

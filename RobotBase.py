@@ -1,4 +1,5 @@
 import math
+import random
 
 STATE_GO_TO_GOAL = 'go to goal'
 STATE_AVOID_OBSTACLES = 'avoid obstacles'
@@ -15,8 +16,16 @@ class RobotBase:
     angle = 0.0
     ultrasonic = (0.0, 0.0, 0.0, 0.0, 0.0)
     weighted_ultrasonic = (0.0, 0.0, 0.0, 0.0, 0.0)
-    goal = (0, 1)
+    #goal = (-1.3, -1.3)
+    #goal = (0, 0)
+    #goal = (1.2, -1.5)
+    goal = (0.0, 1.7)
+
+    #goal = (0, 1.3)
+    #goal = (0, -1.3)
+    #goal = (0, -1.7)
     state = STATE_GO_TO_GOAL
+    #state = STATE_DONE
 
     def set_position(self, position, angle):
         self.position = position
@@ -24,11 +33,11 @@ class RobotBase:
 
     def set_ultrasonic(self, ultrasonic):
         self.ultrasonic = ultrasonic
-        weights = [3, 1, 1, 1, 3]
+        weights = [2, 1, 1, 1, 2]
         self.weighted_ultrasonic = [weights[i] * ultrasonic[i] for i in range(len(ultrasonic))]
 
     def avoid_obstacles(self):
-        forward_multiplier = 0.5
+        forward_multiplier = 0.3
 
         shortest_index = [i[0] for i in sorted(enumerate(self.weighted_ultrasonic), key=lambda x: x[1])][0]
 
@@ -37,7 +46,7 @@ class RobotBase:
             turn_direction = 1 if shortest_index > 2 else -1
             # Bigger means closer
             closeness = min_dist - self.weighted_ultrasonic[shortest_index]
-            turn_speed = rescale(closeness, 0, min_dist, 0.3, 2.5)
+            turn_speed = rescale(closeness, 0, min_dist, 0.5, 3.5)
             forward_speed = rescale(max(self.weighted_ultrasonic[shortest_index] - 10, 0), 0, min_dist, 0, forward_multiplier)
 
             w = turn_direction * turn_speed
@@ -60,11 +69,11 @@ class RobotBase:
 
         angle_distance = math.atan2(math.sin(angle_from_bot - bot_angle), math.cos(angle_from_bot - bot_angle))
 
-        max_turn_speed = 1
-        min_turn_speed = 0.5
-        power_from_distance = rescale(min(distance_from_goal, 1), 0, 1, 0, 0.5)
+        max_turn_speed = 3.3
+        min_turn_speed = 0.6
+        power_from_distance = rescale(min(distance_from_goal, 1), 0, 1, 0.1, 0.4)
         turn_speed = rescale(abs(angle_distance), 0, math.pi, min_turn_speed, max_turn_speed)
-        power_from_turn = max(rescale(abs(angle_distance), 0, (math.pi / 5), power_from_distance, power_from_distance / 5), power_from_distance / 5)
+        power_from_turn = max(rescale(abs(angle_distance), 0, (math.pi / 5), power_from_distance, power_from_distance / 3), power_from_distance / 3)
 
         w = turn_speed
         if angle_distance > 0:
@@ -95,8 +104,8 @@ class RobotBase:
             telemetry_frame['goal'] = self.goal
             telemetry_frame['goal_distance'] = distance_from_goal
 
-        blend_goal_obstacles_threshold = 50
-        avoid_obstacles_threshold = 20
+        blend_goal_obstacles_threshold = 70
+        avoid_obstacles_threshold = 60
         done_threshold = 0.05
 
         if self.state == STATE_DONE:
@@ -109,8 +118,11 @@ class RobotBase:
 
         # Switch to done state if within range of goal
         if distance_from_goal < 0.1 and self.state != STATE_DONE:
-            self.state = STATE_DONE
-            return self.get_velocity(telemetry_frame)
+            #self.state = STATE_DONE
+            print('Done!')
+            self.goal = (random.uniform(-1.2, 1.2), self.goal[1] * -1)
+                
+            #return self.get_velocity(telemetry_frame)
 
         if self.state == STATE_GO_TO_GOAL:
             # Switch to avoid obstacles if too close
@@ -124,7 +136,7 @@ class RobotBase:
             if min(self.weighted_ultrasonic) > blend_goal_obstacles_threshold:
                 self.state = STATE_GO_TO_GOAL
                 return self.get_velocity(telemetry_frame)
-            v, w = self.blend(self.avoid_obstacles(), self.go_to_goal(), 0.5)
+            v, w = self.blend(self.avoid_obstacles(), self.go_to_goal(), 0.3)
 
         if self.state == STATE_AVOID_OBSTACLES:
             if min(self.weighted_ultrasonic) > avoid_obstacles_threshold:
@@ -133,6 +145,9 @@ class RobotBase:
             else:
                 v, w = self.avoid_obstacles()
 
+        if telemetry_frame is not None:
+            telemetry_frame['v'] = v
+            telemetry_frame['w'] = w
         v = v * -1
 
         return v, w
